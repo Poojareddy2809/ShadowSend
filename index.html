@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CipherSafe - Self-Destructing Messages</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- CryptoJS for encryption/decryption -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <!-- Custom Styles -->
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        body {
+            background-color: #0a0a0a;
+            background-image: url('https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        .glassmorphism {
+            background: rgba(10, 10, 10, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Custom scrollbar */
+        textarea::-webkit-scrollbar { width: 8px; }
+        textarea::-webkit-scrollbar-track { background: #1a1a1a; border-radius: 10px;}
+        textarea::-webkit-scrollbar-thumb { background: #4ade80; border-radius: 10px; }
+        textarea::-webkit-scrollbar-thumb:hover { background: #22c55e; }
+    </style>
+</head>
+<body class="text-gray-200 font-sans flex items-center justify-center min-h-screen p-4">
+
+    <!-- Main Container -->
+    <div id="mainContainer" class="container glassmorphism max-w-2xl w-full mx-auto p-6 sm:p-8 rounded-2xl shadow-2xl transition-all duration-300">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-center text-green-400 tracking-wider flex items-center justify-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+                ShadowSend
+            </h1>
+            <p class="text-gray-400 mt-2">Self-destructing, encrypted messages and images.</p>
+        </div>
+
+        <form id="cryptoForm" class="relative">
+            <!-- Input Section -->
+            <fieldset class="border border-gray-700 p-4 rounded-lg mb-6">
+                <legend class="px-2 text-green-400 font-medium">Input</legend>
+                <div class="space-y-4">
+                    <!-- Text/Ciphertext Input -->
+                    <div>
+                        <label for="text" class="block mb-2 text-sm font-medium text-gray-300">Text / Ciphertext</label>
+                        <textarea id="text" rows="4" class="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-green-500 focus:border-green-500 transition duration-300" placeholder="Enter text to encrypt..."></textarea>
+                    </div>
+                    <!-- Image Upload for Encryption -->
+                    <div id="imageUploadContainer">
+                        <label for="imageUpload" class="block mb-2 text-sm font-medium text-gray-300">Or Upload Image</label>
+                        <input type="file" id="imageUpload" accept="image/*" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-white hover:file:bg-green-700 cursor-pointer">
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Settings Section -->
+            <fieldset class="border border-gray-700 p-4 rounded-lg mb-6">
+                <legend class="px-2 text-green-400 font-medium">Settings</legend>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Operation Selection -->
+                    <div>
+                         <label class="block mb-2 text-sm font-medium text-gray-300">Operation</label>
+                         <div class="flex items-center space-x-4 p-3 bg-gray-800 border border-gray-600 rounded-lg">
+                            <div class="flex items-center">
+                                <input checked id="encrypt" type="radio" value="encrypt" name="operation" class="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 focus:ring-green-500">
+                                <label for="encrypt" class="ms-2 text-sm font-medium text-gray-200">Encrypt</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="decrypt" type="radio" value="decrypt" name="operation" class="w-4 h-4 text-red-600 bg-gray-700 border-gray-600 focus:ring-red-500">
+                                <label for="decrypt" class="ms-2 text-sm font-medium text-gray-200">Decrypt</label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Time Limit -->
+                    <div id="timeLimitContainer">
+                        <label for="timeLimit" class="block mb-2 text-sm font-medium text-gray-300">Self-Destruct in (Minutes)</label>
+                        <input type="number" id="timeLimit" min="1" class="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-green-500 focus:border-green-500 transition duration-300" placeholder="Optional">
+                    </div>
+                </div>
+                 <!-- Password Input -->
+                <div class="mt-4">
+                    <label for="password" class="block mb-2 text-sm font-medium text-gray-300">Password</label>
+                    <input type="password" id="password" class="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-green-500 focus:border-green-500 transition duration-300" placeholder="Enter your secret password" required>
+                </div>
+            </fieldset>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button type="submit" class="w-full text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-800 font-medium rounded-lg text-lg px-5 py-3 text-center transition duration-300 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/></svg>
+                    Process
+                </button>
+                <button type="button" id="resetBtn" class="w-full text-white bg-gray-600 hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-800 font-medium rounded-lg text-lg px-5 py-3 text-center transition duration-300">Reset</button>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="absolute inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center rounded-2xl hidden">
+                 <svg class="animate-spin h-10 w-10 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                 </svg>
+            </div>
+        </form>
+
+        <!-- Result Section -->
+        <div id="resultSection" class="mt-8"></div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-green-600 text-white py-2 px-4 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300"></div>
+
+    <script>
+        // DOM element references
+        const cryptoForm = document.getElementById('cryptoForm');
+        const textInput = document.getElementById('text');
+        const imageUpload = document.getElementById('imageUpload');
+        const imageUploadContainer = document.getElementById('imageUploadContainer');
+        const passwordInput = document.getElementById('password');
+        const timeLimitInput = document.getElementById('timeLimit');
+        const timeLimitContainer = document.getElementById('timeLimitContainer');
+        const resultSection = document.getElementById('resultSection');
+        const resetBtn = document.getElementById('resetBtn');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const toast = document.getElementById('toast');
+        const operationRadios = document.querySelectorAll('input[name="operation"]');
+
+        /**
+         * Shows a toast notification.
+         * @param {string} message The message to display.
+         */
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.remove('opacity-0', 'translate-y-20');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-20');
+            }, 3000);
+        }
+
+        /**
+         * Clears all output and error messages.
+         */
+        function clearOutput() {
+            resultSection.innerHTML = '';
+        }
+        
+        /**
+         * Displays a result or error card in the UI.
+         * @param {string} title The title of the card.
+         * @param {string} content The main content (text or image data).
+         * @param {string} type The type of card ('success', 'error', 'image').
+         */
+        function displayCard(title, content, type = 'success') {
+             clearOutput();
+             const isError = type === 'error';
+             const isImage = type === 'image';
+
+             const titleColor = isError ? 'text-red-400' : 'text-green-400';
+             const borderColor = isError ? 'border-red-700' : 'border-gray-700';
+             const bgColor = isError ? 'bg-red-900 bg-opacity-50' : 'bg-gray-800';
+
+             let contentHtml = isImage 
+                ? `<img id="decryptedImage" class="max-w-full h-auto rounded-lg mx-auto" src="${content}" alt="Decrypted Image"/>`
+                : `<div class="p-4 rounded-lg ${bgColor} ${isError ? 'text-red-300' : 'text-green-300'} break-words whitespace-pre-wrap" data-result-content>${content}</div>`;
+            
+             const copyButtonHtml = !isError && !isImage 
+                ? `<button data-action="copy" class="text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-lg transition duration-300">Copy</button>`
+                : '';
+
+             const cardHtml = `
+                <div class="fade-in border ${borderColor} p-4 rounded-lg">
+                    <div class="flex justify-between items-center mb-2">
+                         <h3 class="text-lg font-semibold ${titleColor}">${title}</h3>
+                         ${copyButtonHtml}
+                    </div>
+                    ${contentHtml}
+                </div>
+             `;
+             resultSection.innerHTML = cardHtml;
+        }
+        
+        /**
+         * Toggles UI elements based on the selected operation (Encrypt/Decrypt).
+         */
+        function toggleOperationUI() {
+            const operation = document.querySelector('input[name="operation"]:checked').value;
+            // Clear file input when switching modes to prevent confusion
+            imageUpload.value = '';
+
+            if (operation === 'encrypt') {
+                imageUploadContainer.style.display = 'block';
+                timeLimitContainer.style.display = 'block';
+                textInput.placeholder = 'Enter text to encrypt...';
+            } else { // decrypt
+                imageUploadContainer.style.display = 'none';
+                timeLimitContainer.style.display = 'none';
+                textInput.placeholder = 'Enter ciphertext to decrypt...';
+            }
+        }
+        
+        // Add event listeners for operation change
+        operationRadios.forEach(radio => radio.addEventListener('change', toggleOperationUI));
+
+        /**
+         * Handles the main form submission.
+         */
+        cryptoForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            clearOutput();
+            loadingSpinner.classList.remove('hidden');
+
+            // Using a timeout to allow the spinner to render before the heavy work starts
+            setTimeout(() => {
+                const text = textInput.value;
+                const password = passwordInput.value;
+                const operation = document.querySelector('input[name="operation"]:checked').value;
+                const file = imageUpload.files[0];
+                const timeLimit = parseInt(timeLimitInput.value, 10);
+
+                if (!password) {
+                    displayCard('Error', 'Please provide a password.', 'error');
+                    loadingSpinner.classList.add('hidden');
+                    return;
+                }
+
+                try {
+                    if (operation === 'encrypt') {
+                        const processData = (dataToEncrypt) => {
+                            let payload = { data: dataToEncrypt };
+                            if (timeLimit && timeLimit > 0) {
+                                // Calculate expiry timestamp in milliseconds
+                                const expiryTimestamp = new Date().getTime() + timeLimit * 60 * 1000;
+                                payload.expires = expiryTimestamp;
+                            }
+                            const encrypted = CryptoJS.AES.encrypt(JSON.stringify(payload), password).toString();
+                            displayCard('Encrypted Ciphertext', encrypted, 'success');
+                        };
+
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = () => processData(reader.result);
+                            reader.onerror = () => displayCard('Error', 'Failed to read the image file.', 'error');
+                            reader.readAsDataURL(file);
+                        } else if (text) {
+                            processData(text);
+                        } else {
+                            displayCard('Error', 'Please provide text or an image to encrypt.', 'error');
+                        }
+                    } else { // decrypt
+                        if (!text) {
+                             displayCard('Error', 'Please provide ciphertext to decrypt.', 'error');
+                             return;
+                        }
+                        const bytes = CryptoJS.AES.decrypt(text, password);
+                        const decryptedJson = bytes.toString(CryptoJS.enc.Utf8);
+                        
+                        if (!decryptedJson) throw new Error("Decryption Failed");
+
+                        const payload = JSON.parse(decryptedJson);
+
+                        // Check for expiration
+                        if (payload.expires && new Date().getTime() > payload.expires) {
+                            displayCard('Message Expired', 'This message has self-destructed and is no longer available.', 'error');
+                            return;
+                        }
+
+                        // Display the data from the payload
+                        if (typeof payload.data === 'string' && payload.data.startsWith('data:image')) {
+                            displayCard('Decrypted Image', payload.data, 'image');
+                        } else {
+                            displayCard('Decrypted Text', payload.data, 'success');
+                        }
+                    }
+                } catch (err) {
+                     console.error("Processing error:", err);
+                     displayCard('Decryption Failed', 'Please check your ciphertext and password. It might also be an old message format.', 'error');
+                } finally {
+                    loadingSpinner.classList.add('hidden');
+                }
+            }, 100);
+        });
+
+        /**
+         * Handles the reset button click.
+         */
+        resetBtn.addEventListener('click', () => {
+            cryptoForm.reset();
+            imageUpload.value = '';
+            clearOutput();
+            toggleOperationUI();
+        });
+        
+        /**
+         * Handles clicks within the result section, like the copy button.
+         * This uses the document.execCommand for broader compatibility in restricted environments.
+         */
+        resultSection.addEventListener('click', (e) => {
+            if (e.target && e.target.dataset.action === 'copy') {
+                const contentDiv = resultSection.querySelector('[data-result-content]');
+                if (contentDiv) {
+                    const textToCopy = contentDiv.textContent;
+                    const textArea = document.createElement('textarea');
+                    textArea.value = textToCopy;
+                    
+                    // Prevent screen scroll and making the textarea visible
+                    textArea.style.position = 'fixed';
+                    textArea.style.top = '0';
+                    textArea.style.left = '0';
+                    textArea.style.opacity = '0';
+
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+
+                    try {
+                        const successful = document.execCommand('copy');
+                        if (successful) {
+                            showToast('Copied to clipboard!');
+                        } else {
+                            showToast('Error: Could not copy text.');
+                        }
+                    } catch (err) {
+                        console.error('Failed to copy text: ', err);
+                        showToast('Error: Could not copy text.');
+                    }
+
+                    document.body.removeChild(textArea);
+                }
+            }
+        });
+        
+        // Initial UI setup on page load
+        document.addEventListener('DOMContentLoaded', toggleOperationUI);
+    </script>
+</body>
+</html>
