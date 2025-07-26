@@ -1,1 +1,3 @@
-# ShadowSend
+ShadowSend
+Self-destructing, encrypted messages and images.
+ShadowSend is a secure browser-based security tool for private, transient communication. It encrypts text and images, allowing users to share securely. The tool uses the AES Encryption Standard algorithm and a user-defined self-destruction timer. The user interface is visually appealing and intuitive, with a cleanly divided layout. The technical implementation is built with HTML, CSS, and JavaScript, offering privacy and security that server-based applications cannot guarantee. ShadowSend is fully responsive and adapts to different screen sizes.
