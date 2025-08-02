@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CipherSafe - Self-Destructing Messages</title>
+    <title>ShadowSend - Self-Destructing Messages</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- CryptoJS for encryption/decryption -->
@@ -40,7 +40,8 @@
 <body class="text-gray-200 font-sans flex items-center justify-center min-h-screen p-4">
 
     <!-- Main Container -->
-    <div id="mainContainer" class="container glassmorphism max-w-2xl w-full mx-auto p-6 sm:p-8 rounded-2xl shadow-2xl transition-all duration-300">
+    <div id="mainContainer" class="container glassmorphism max-w-2xl w-full mx-auto p-6 sm:p-8 rounded-2xl shadow-2xl transition-all duration-300 relative">
+        
         <!-- Header -->
         <div class="text-center mb-8">
             <h1 class="text-3xl sm:text-4xl font-bold text-center text-green-400 tracking-wider flex items-center justify-center gap-3">
@@ -103,7 +104,7 @@
             <div class="flex flex-col sm:flex-row gap-4">
                 <button type="submit" class="w-full text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-800 font-medium rounded-lg text-lg px-5 py-3 text-center transition duration-300 flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/></svg>
-                    Process
+                    <span>Process</span>
                 </button>
                 <button type="button" id="resetBtn" class="w-full text-white bg-gray-600 hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-800 font-medium rounded-lg text-lg px-5 py-3 text-center transition duration-300">Reset</button>
             </div>
@@ -119,13 +120,51 @@
 
         <!-- Result Section -->
         <div id="resultSection" class="mt-8"></div>
+        
+        <!-- Quick Translator Section -->
+        <div id="translatorSection" class="mt-8">
+             <fieldset class="border border-gray-700 p-4 rounded-lg">
+                <legend class="px-2 text-blue-400 font-medium">Quick Translator</legend>
+                <div class="space-y-4">
+                    <div>
+                        <label for="translatorInput" class="block mb-2 text-sm font-medium text-gray-300">Translate This:</label>
+                        <textarea id="translatorInput" rows="3" class="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500 transition duration-300" placeholder="Enter text to translate..."></textarea>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <select id="translatorLanguageSelector" class="bg-gray-800 border border-gray-600 rounded-lg text-white text-sm p-2 focus:ring-blue-500 focus:border-blue-500 flex-grow">
+                            <option value="en">English</option>
+                            <option value="es">Español</option>
+                            <option value="fr">Français</option>
+                            <option value="de">Deutsch</option>
+                            <option value="it">Italiano</option>
+                            <option value="hi">हिन्दी</option>
+                            <option value="te">తెలుగు</option>
+                            <option value="mr">मराठी</option>
+                            <option value="bn">বাংলা</option>
+                            <option value="ko">한국어</option>
+                            <option value="ja">日本語</option>
+                            <option value="zh">中文</option>
+                        </select>
+                        <button id="translateButton" class="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-sm px-5 py-2.5 transition duration-300">Translate</button>
+                    </div>
+                    <div>
+                        <label for="translatorOutput" class="block mb-2 text-sm font-medium text-gray-300">Translated Text:</label>
+                        <div class="relative">
+                            <textarea id="translatorOutput" rows="3" readonly class="w-full p-3 bg-gray-900 border border-gray-600 rounded-lg text-blue-300 focus:ring-blue-500 focus:border-blue-500 transition duration-300" placeholder="Translation will appear here..."></textarea>
+                            <button id="copyTranslatedTextButton" class="absolute top-2 right-2 text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-lg transition duration-300 hidden">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
     </div>
 
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-5 right-5 bg-green-600 text-white py-2 px-4 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300"></div>
 
     <script>
-        // DOM element references
+        // --- DOM ELEMENT REFERENCES ---
         const cryptoForm = document.getElementById('cryptoForm');
         const textInput = document.getElementById('text');
         const imageUpload = document.getElementById('imageUpload');
@@ -138,6 +177,16 @@
         const loadingSpinner = document.getElementById('loadingSpinner');
         const toast = document.getElementById('toast');
         const operationRadios = document.querySelectorAll('input[name="operation"]');
+
+        // Translator elements
+        const translateButton = document.getElementById('translateButton');
+        const translatorInput = document.getElementById('translatorInput');
+        const translatorOutput = document.getElementById('translatorOutput');
+        const copyTranslatedTextButton = document.getElementById('copyTranslatedTextButton');
+
+        let originalDecryptedText = '';
+
+        // --- CORE FUNCTIONS ---
 
         /**
          * Shows a toast notification.
@@ -156,6 +205,7 @@
          */
         function clearOutput() {
             resultSection.innerHTML = '';
+            originalDecryptedText = '';
         }
         
         /**
@@ -168,6 +218,7 @@
              clearOutput();
              const isError = type === 'error';
              const isImage = type === 'image';
+             const isSuccessText = type === 'success';
 
              const titleColor = isError ? 'text-red-400' : 'text-green-400';
              const borderColor = isError ? 'border-red-700' : 'border-gray-700';
@@ -198,7 +249,6 @@
          */
         function toggleOperationUI() {
             const operation = document.querySelector('input[name="operation"]:checked').value;
-            // Clear file input when switching modes to prevent confusion
             imageUpload.value = '';
 
             if (operation === 'encrypt') {
@@ -212,18 +262,15 @@
             }
         }
         
-        // Add event listeners for operation change
+        // --- EVENT LISTENERS ---
+        
         operationRadios.forEach(radio => radio.addEventListener('change', toggleOperationUI));
 
-        /**
-         * Handles the main form submission.
-         */
         cryptoForm.addEventListener('submit', (e) => {
             e.preventDefault();
             clearOutput();
             loadingSpinner.classList.remove('hidden');
 
-            // Using a timeout to allow the spinner to render before the heavy work starts
             setTimeout(() => {
                 const text = textInput.value;
                 const password = passwordInput.value;
@@ -242,12 +289,10 @@
                         const processData = (dataToEncrypt) => {
                             let payload = { data: dataToEncrypt };
                             if (timeLimit && timeLimit > 0) {
-                                // Calculate expiry timestamp in milliseconds
-                                const expiryTimestamp = new Date().getTime() + timeLimit * 60 * 1000;
-                                payload.expires = expiryTimestamp;
+                                payload.expires = new Date().getTime() + timeLimit * 60 * 1000;
                             }
                             const encrypted = CryptoJS.AES.encrypt(JSON.stringify(payload), password).toString();
-                            displayCard('Encrypted Ciphertext', encrypted, 'success');
+                            displayCard('Encrypted Ciphertext', encrypted);
                         };
 
                         if (file) {
@@ -272,13 +317,13 @@
 
                         const payload = JSON.parse(decryptedJson);
 
-                        // Check for expiration
                         if (payload.expires && new Date().getTime() > payload.expires) {
                             displayCard('Message Expired', 'This message has self-destructed and is no longer available.', 'error');
                             return;
                         }
+                        
+                        originalDecryptedText = payload.data;
 
-                        // Display the data from the payload
                         if (typeof payload.data === 'string' && payload.data.startsWith('data:image')) {
                             displayCard('Decrypted Image', payload.data, 'image');
                         } else {
@@ -287,64 +332,114 @@
                     }
                 } catch (err) {
                      console.error("Processing error:", err);
-                     displayCard('Decryption Failed', 'Please check your ciphertext and password. It might also be an old message format.', 'error');
+                     displayCard('Decryption Failed', 'Please check your ciphertext and password.', 'error');
                 } finally {
                     loadingSpinner.classList.add('hidden');
                 }
             }, 100);
         });
 
-        /**
-         * Handles the reset button click.
-         */
         resetBtn.addEventListener('click', () => {
             cryptoForm.reset();
-            imageUpload.value = '';
             clearOutput();
             toggleOperationUI();
         });
         
-        /**
-         * Handles clicks within the result section, like the copy button.
-         * This uses the document.execCommand for broader compatibility in restricted environments.
-         */
         resultSection.addEventListener('click', (e) => {
-            if (e.target && e.target.dataset.action === 'copy') {
+            const action = e.target.dataset.action;
+            if (action === 'copy') {
                 const contentDiv = resultSection.querySelector('[data-result-content]');
                 if (contentDiv) {
                     const textToCopy = contentDiv.textContent;
                     const textArea = document.createElement('textarea');
                     textArea.value = textToCopy;
-                    
-                    // Prevent screen scroll and making the textarea visible
                     textArea.style.position = 'fixed';
-                    textArea.style.top = '0';
-                    textArea.style.left = '0';
-                    textArea.style.opacity = '0';
-
+                    textArea.style.top = '-9999px';
+                    textArea.style.left = '-9999px';
                     document.body.appendChild(textArea);
                     textArea.focus();
                     textArea.select();
-
                     try {
-                        const successful = document.execCommand('copy');
-                        if (successful) {
-                            showToast('Copied to clipboard!');
-                        } else {
-                            showToast('Error: Could not copy text.');
-                        }
+                        document.execCommand('copy');
+                        showToast('Copied to clipboard!');
                     } catch (err) {
                         console.error('Failed to copy text: ', err);
                         showToast('Error: Could not copy text.');
                     }
-
                     document.body.removeChild(textArea);
                 }
             }
         });
+
+        // --- QUICK TRANSLATOR LOGIC ---
+        translateButton.addEventListener('click', async () => {
+            const textToTranslate = translatorInput.value;
+            const selector = document.getElementById('translatorLanguageSelector');
+            const targetLangName = selector.options[selector.selectedIndex].text;
+            
+            if (!textToTranslate) {
+                translatorOutput.value = 'Please enter text to translate.';
+                return;
+            }
+
+            translatorOutput.value = `Translating to ${targetLangName}...`;
+            copyTranslatedTextButton.classList.add('hidden');
+
+            try {
+                const prompt = `Translate the following text to ${targetLangName}: "${textToTranslate}"`;
+                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory };
+                
+                // The API key provided by the user is inserted here.
+                const apiKey = "AIzaSyBeGDRaaezpBf4W5dFoqV7j523weWVbJOQ"; 
+                
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const translatedText = result.candidates[0].content.parts[0].text;
+                    translatorOutput.value = translatedText;
+                    copyTranslatedTextButton.classList.remove('hidden');
+                } else {
+                    throw new Error("Invalid API response format");
+                }
+
+            } catch (error) {
+                console.error('Translation error:', error);
+                translatorOutput.value = 'An error occurred during translation.';
+                copyTranslatedTextButton.classList.add('hidden');
+            }
+        });
         
-        // Initial UI setup on page load
-        document.addEventListener('DOMContentLoaded', toggleOperationUI);
+        copyTranslatedTextButton.addEventListener('click', () => {
+            const textToCopy = translatorOutput.value;
+            translatorOutput.select(); // Select the text
+            try {
+                document.execCommand('copy');
+                showToast('Translated text copied!');
+            } catch (err) {
+                console.error('Failed to copy translated text: ', err);
+                showToast('Error: Could not copy text.');
+            }
+        });
+        
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            toggleOperationUI();
+        });
     </script>
 </body>
 </html>
